@@ -1,2 +1,12 @@
 queue_rules:
   - name: Orion
+pull_request_rules:
+  - name: Label conflicting pull requests
+    description: Add a label to a pull request with conflict to spot it easily
+    conditions:
+      - conflict
+      - -closed
+    actions:
+      label:
+        toggle:
+          - conflict
