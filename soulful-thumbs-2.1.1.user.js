@@ -285,8 +285,14 @@
 
     const lb=setupLightbox(); const meta=createMetadataManager();
     
+    // Enhanced logging for v2.1.2
     console.log('[SoulfulThumbs] v2.1.2 Enhanced loaded successfully');
-  } catch(error) {
-    console.error('[SoulfulThumbs] Error:', error);
+  }
+
+  // Initialize
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',main);
+  } else {
+    main();
   }
 })();
