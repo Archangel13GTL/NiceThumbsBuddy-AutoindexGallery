@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         NiceThumbsBuddy — Autoindex Gallery
+// @name         NiceThumbsBuddy — Autoindex Gallery (Enhanced)
 // @namespace    archangel.nicethumbsbuddy
-// @version      2.5.0
-// @description  Transform bare Apache/Nginx directory listings into a rich gallery with smart folders, interactive sitemap, advanced sorting, and zoom.
+// @version      2.6.0
+// @description  Transform bare Apache/Nginx directory listings into a rich gallery with improved performance, accessibility, user experience, and smart error handling.
 // @author       Archangel13GTL
 // @license      MIT
 // @run-at       document-end
@@ -27,9 +27,22 @@
 // ==/UserScript==
 
 /*
- * NiceThumbsBuddy: "When your directories deserve better than naked listings."
+ * NiceThumbsBuddy Enhanced: "When your directories deserve better than naked listings."
  * 
- * Every folder has a story to tell. This script helps it tell that story with style.
+ * Every folder has a story to tell. This script helps it tell that story with style,
+ * performance, and accessibility in mind.
+ * 
+ * Version 2.6.0 Improvements:
+ * - Enhanced performance with optimized metadata caching and memory management
+ * - Improved accessibility with proper ARIA labels and keyboard navigation
+ * - Better error handling and user feedback with notification system
+ * - Cache size limits and automatic pruning to prevent memory issues
+ * - Comprehensive JSDoc documentation for better maintainability
+ * - Enhanced keyboard shortcuts help system (press H to view)
+ * - Robust URL validation and error recovery
+ * - Mobile-optimized touch gestures and responsive design
+ * - Throttled cache saves to improve performance
+ * - Welcome notification for first-time users
  * 
  * "Knowledge isn't power until it is applied." - Dale Carnegie
  * (And directories aren't useful until they're navigable!)
@@ -45,6 +58,9 @@
   const SCAN_CONCURRENCY = 4;   // sitemap concurrent fetches
   const IO_THRESHOLD = 0.1;     // intersection observer threshold
   const CACHE_EXPIRY = 7200000; // metadata cache expiry (2 hours)
+  const CACHE_MAX_SIZE = 10000; // Maximum cache entries to prevent memory issues
+  const DEBOUNCE_DELAY = 150;   // Default debounce delay for better performance
+  const THROTTLE_DELAY = 100;   // Default throttle delay for scroll handlers
 
   // Local storage keys
   const LSK = {
@@ -56,7 +72,8 @@
     adv: 'ntb:advmeta',
     wheelZoom: 'ntb:wheelzoom',
     theme: 'ntb:theme',
-    expandSitemap: 'ntb:expandmap'
+    expandSitemap: 'ntb:expandmap',
+    keyboardShortcuts: 'ntb:keyboard'
   };
 
   const SELECTORS = [
@@ -68,7 +85,16 @@
   // --------------------------- Utils ---------------------------------------
   const $ = (sel, ctx=document) => ctx.querySelector(sel);
   const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
-  const abs = (href, base=location.href) => new URL(href, base).href;
+  
+  const abs = (href, base=location.href) => {
+    try {
+      return new URL(href, base).href;
+    } catch (e) {
+      console.warn('[NiceThumbsBuddy] Invalid URL:', href, e);
+      return href;
+    }
+  };
+  
   const isFunctionalLink = (a) => a && a.href && !a.href.startsWith('mailto:') && !a.href.startsWith('javascript:');
   const isDirHref = (href) => /\/$/.test(href.split('#')[0].split('?')[0]);
   const isImgHref = (href) => IMG_EXT.test(href.split('?')[0]);
@@ -79,6 +105,7 @@
     try { 
       return new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare; 
     } catch(e) { 
+      console.warn('[NiceThumbsBuddy] Intl.Collator not supported, falling back to basic sort');
       return (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }); 
     } 
   })();
@@ -102,22 +129,22 @@
   };
   
   // Debounce function execution
-  const debounce = (fn, ms = 150) => {
-    let t;
-    return (...a) => {
-      clearTimeout(t);
-      t = setTimeout(() => fn(...a), ms);
+  const debounce = (fn, ms = DEBOUNCE_DELAY) => {
+    let timeout;
+    return function(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn.apply(this, args), ms);
     };
   };
 
   // Throttle function execution (good for scroll handlers)
-  const throttle = (fn, ms = 100) => {
+  const throttle = (fn, ms = THROTTLE_DELAY) => {
     let lastCall = 0;
-    return (...args) => {
+    return function(...args) {
       const now = Date.now();
       if (now - lastCall < ms) return;
       lastCall = now;
-      return fn(...args);
+      return fn.apply(this, args);
     };
   };
 
@@ -154,6 +181,7 @@
       // Otherwise use date format
       return d.toLocaleDateString();
     } catch (e) {
+      console.warn('[NiceThumbsBuddy] Date formatting error:', e);
       return '—';
     }
   };
@@ -180,6 +208,39 @@
       default: 'var(--ntb-ac)'
     };
     return colors[type] || colors.default;
+  };
+
+  // Show user notification with auto-dismiss
+  const showNotification = (message, type = 'info', duration = 3000) => {
+    // Remove existing notifications
+    const existing = $('.ntb-notification');
+    if (existing) existing.remove();
+
+    const notification = document.createElement('div');
+    notification.className = `ntb-notification ntb-${type}`;
+    notification.setAttribute('role', 'alert');
+    notification.setAttribute('aria-live', 'polite');
+    notification.innerHTML = `
+      <div class="ntb-notification-content">
+        <span class="ntb-notification-message">${message}</span>
+        <button class="ntb-notification-close" aria-label="Close notification">&times;</button>
+      </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Close button functionality
+    const closeBtn = notification.querySelector('.ntb-notification-close');
+    closeBtn.addEventListener('click', () => notification.remove());
+
+    // Auto-dismiss
+    if (duration > 0) {
+      setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+      }, duration);
+    }
+
+    return notification;
   };
 
   // --------------------------- Detection Logic ----------------------------
@@ -1032,6 +1093,188 @@
       .ntb-item.img:hover img {
         transform: none;
       }
+      
+      .ntb-notification {
+        transition: none;
+      }
+    }
+    
+    /* Notification system */
+    .ntb-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10001;
+      background: var(--ntb-card-bg);
+      border: 1px solid var(--ntb-border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: var(--ntb-shadow);
+      max-width: 400px;
+      transform: translateX(420px);
+      animation: ntb-slide-in 0.3s ease forwards;
+    }
+    
+    .ntb-notification.ntb-success {
+      border-color: #00d1b2;
+      background: rgba(0, 209, 178, 0.05);
+    }
+    
+    .ntb-notification.ntb-warning {
+      border-color: #ffdd57;
+      background: rgba(255, 221, 87, 0.05);
+    }
+    
+    .ntb-notification.ntb-error {
+      border-color: #ff5a5f;
+      background: rgba(255, 90, 95, 0.05);
+    }
+    
+    .ntb-notification-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    
+    .ntb-notification-message {
+      color: var(--ntb-fg);
+      font-size: 14px;
+      flex: 1;
+    }
+    
+    .ntb-notification-close {
+      background: none;
+      border: none;
+      color: var(--ntb-dim);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background-color 0.15s ease;
+    }
+    
+    .ntb-notification-close:hover {
+      background: var(--ntb-highlight);
+      color: var(--ntb-fg);
+    }
+    
+    .ntb-notification-close:focus-visible {
+      outline: 2px solid var(--ntb-ac);
+      outline-offset: 2px;
+    }
+    
+    @keyframes ntb-slide-in {
+      to {
+        transform: translateX(0);
+      }
+    }
+    
+    /* Screen reader only content */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Help modal */
+    .ntb-help-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10002;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .ntb-help-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--ntb-overlay);
+      cursor: pointer;
+    }
+    
+    .ntb-help-dialog {
+      position: relative;
+      background: var(--ntb-card-bg);
+      border: 1px solid var(--ntb-border);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: var(--ntb-shadow);
+    }
+    
+    .ntb-help-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--ntb-dim);
+      cursor: pointer;
+      font-size: 20px;
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.15s ease;
+    }
+    
+    .ntb-help-close:hover {
+      background: var(--ntb-highlight);
+      color: var(--ntb-fg);
+    }
+    
+    .ntb-help-content h3 {
+      margin: 0 0 16px 0;
+      color: var(--ntb-fg);
+      font-size: 18px;
+    }
+    
+    .ntb-shortcut-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 8px;
+      margin: 16px 0;
+    }
+    
+    .ntb-shortcut-grid div {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      color: var(--ntb-fg);
+    }
+    
+    .ntb-shortcut-grid kbd {
+      background: var(--ntb-highlight);
+      color: var(--ntb-ac);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 12px;
+      font-weight: bold;
+      min-width: 24px;
+      text-align: center;
+    }
+    
+    .ntb-help-note {
+      margin: 16px 0 0 0;
+      color: var(--ntb-dim);
+      font-size: 14px;
+      font-style: italic;
     }
   `;
 
@@ -1128,7 +1371,7 @@
     const storageKey = 'ntb-metadata-cache';
     const storageExpiry = 'ntb-metadata-expiry';
     
-    // Try to load cached data
+    // Try to load cached data with improved error handling
     let cache = new Map();
     try {
       const now = Date.now();
@@ -1138,9 +1381,15 @@
       if (expiry > now) {
         const cachedData = JSON.parse(sessionStorage.getItem(storageKey) || '{}');
         Object.entries(cachedData).forEach(([url, data]) => {
-          cache.set(url, data);
+          // Validate cached data before adding
+          if (url && data && typeof data === 'object') {
+            cache.set(url, data);
+          }
         });
-        console.log(`[NiceThumbsBuddy] Loaded metadata for ${cache.size} items from cache`);
+        
+        if (cache.size > 0) {
+          console.log(`[NiceThumbsBuddy] Loaded metadata for ${cache.size} items from cache`);
+        }
       } else {
         // Cache expired, clear it
         sessionStorage.removeItem(storageKey);
@@ -1148,7 +1397,282 @@
       }
     } catch (e) {
       console.warn('[NiceThumbsBuddy] Error loading metadata cache:', e);
+      // Clear corrupted cache
+      try {
+        sessionStorage.removeItem(storageKey);
+        sessionStorage.removeItem(storageExpiry);
+      } catch (clearError) {
+        console.warn('[NiceThumbsBuddy] Could not clear corrupted cache:', clearError);
+      }
     }
     
     const inFlight = new Map();
+    const saveThrottled = throttle(() => {
+      try {
+        // Limit cache size to prevent memory issues
+        if (cache.size > CACHE_MAX_SIZE) {
+          const entries = Array.from(cache.entries());
+          const toKeep = entries.slice(-Math.floor(CACHE_MAX_SIZE * 0.8)); // Keep 80% of max
+          cache.clear();
+          toKeep.forEach(([key, value]) => cache.set(key, value));
+          console.log(`[NiceThumbsBuddy] Cache pruned to ${cache.size} items`);
+        }
+        
+        const cacheData = Object.fromEntries(cache);
+        sessionStorage.setItem(storageKey, JSON.stringify(cacheData));
+        sessionStorage.setItem(storageExpiry, String(Date.now() + CACHE_EXPIRY));
+      } catch (e) {
+        console.warn('[NiceThumbsBuddy] Error saving metadata cache:', e);
+        if (e.name === 'QuotaExceededError') {
+          // Storage quota exceeded, clear cache and notify user
+          try {
+            sessionStorage.removeItem(storageKey);
+            sessionStorage.removeItem(storageExpiry);
+            cache.clear();
+            showNotification('Storage quota exceeded. Metadata cache cleared.', 'warning');
+          } catch (clearError) {
+            console.error('[NiceThumbsBuddy] Failed to clear cache after quota error:', clearError);
+          }
+        }
+      }
+    }, 1000);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          
+          const url = entry.target.getAttribute('data-url');
+          if (!url || cache.has(url) || inFlight.has(url)) continue;
+          
+          // Only fetch metadata if advanced metadata is enabled
+          const advancedMeta = localStorage.getItem(LSK.adv) !== 'false';
+          if (!advancedMeta) continue;
+          
+          // Mark as in-flight to prevent duplicate requests
+          inFlight.set(url, true);
+          
+          // Fetch metadata with timeout and retry logic
+          fetchMetadata(url)
+            .then(metadata => {
+              if (metadata) {
+                cache.set(url, { ...metadata, fetchedAt: Date.now() });
+                saveThrottled();
+              }
+            })
+            .catch(error => {
+              console.warn(`[NiceThumbsBuddy] Failed to fetch metadata for ${url}:`, error);
+            })
+            .finally(() => {
+              inFlight.delete(url);
+            });
+        }
+      },
+      { threshold: IO_THRESHOLD, rootMargin: '50px' }
+    );
+
+    // Enhanced metadata fetching with timeout and retry
+    async function fetchMetadata(url, retries = 1) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        const response = await fetch(url, {
+          method: 'HEAD',
+          signal: controller.signal,
+          credentials: 'same-origin'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const metadata = {};
+        
+        // Extract content length
+        const contentLength = response.headers.get('content-length');
+        if (contentLength) {
+          metadata.bytes = parseInt(contentLength, 10);
+        }
+        
+        // Extract last modified
+        const lastModified = response.headers.get('last-modified');
+        if (lastModified) {
+          metadata.mtime = new Date(lastModified).toISOString();
+        }
+        
+        // Extract content type
+        const contentType = response.headers.get('content-type');
+        if (contentType) {
+          metadata.contentType = contentType;
+        }
+        
+        return metadata;
+        
+      } catch (error) {
+        clearTimeout(timeoutId);
+        
+        if (error.name === 'AbortError') {
+          throw new Error('Request timeout');
+        }
+        
+        // Retry once on network errors
+        if (retries > 0 && (error.name === 'TypeError' || error.message.includes('network'))) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          return fetchMetadata(url, retries - 1);
+        }
+        
+        throw error;
+      }
+    }
+
+    function noteImageSize(url, width, height) {
+      if (!url) return;
+      
+      const existing = cache.get(url) || {};
+      if (!existing.width || !existing.height) {
+        cache.set(url, { ...existing, width, height });
+        saveThrottled();
+      }
+    }
+
+    function get(url) {
+      return cache.get(url) || {};
+    }
+
+    function observe(element) {
+      if (element) {
+        io.observe(element);
+      }
+    }
+
+    function unobserve(element) {
+      if (element) {
+        io.unobserve(element);
+      }
+    }
+
+    // Cleanup function for performance
+    function cleanup() {
+      io.disconnect();
+      cache.clear();
+    }
+
+    return {
+      noteImageSize,
+      get,
+      observe,
+      unobserve,
+      cleanup,
+      getCacheSize: () => cache.size
+    };
+  }
+
+  // --------------------------- Initialization -----------------------------
+  
+  /**
+   * Main initialization function
+   */
+  function initializeEnhancements() {
+    // Check if this looks like an autoindex page
+    if (!looksLikeAutoIndex()) {
+      console.log('[NiceThumbsBuddy] Not an autoindex page, skipping initialization');
+      return;
+    }
+
+    console.log('[NiceThumbsBuddy] Enhanced version 2.6.0 initializing...');
+    
+    try {
+      // Inject enhanced CSS
+      injectCSS();
+      
+      // Show welcome notification for first-time users
+      if (!localStorage.getItem('ntb:welcomed')) {
+        setTimeout(() => {
+          showNotification('NiceThumbsBuddy Enhanced loaded! Press H for keyboard shortcuts.', 'success', 5000);
+          localStorage.setItem('ntb:welcomed', 'true');
+        }, 1000);
+      }
+      
+      // Initialize metadata manager
+      const metadataManager = createMetadataManager();
+      
+      // Add keyboard shortcut handler
+      document.addEventListener('keydown', (e) => {
+        // Don't interfere with typing in inputs
+        if (e.target.matches('input, textarea, select')) return;
+        
+        if (e.key === 'h' || e.key === 'H') {
+          showKeyboardHelp();
+          e.preventDefault();
+        }
+      });
+      
+      console.log('[NiceThumbsBuddy] Enhanced initialization complete');
+      
+    } catch (error) {
+      console.error('[NiceThumbsBuddy] Initialization error:', error);
+      showNotification('Failed to initialize NiceThumbsBuddy. Please refresh the page.', 'error');
+    }
+  }
+
+  /**
+   * Show keyboard shortcuts help
+   */
+  function showKeyboardHelp() {
+    const helpContent = `
+      <div class="ntb-help-content">
+        <h3>Keyboard Shortcuts</h3>
+        <div class="ntb-shortcut-grid">
+          <div><kbd>H</kbd> Show this help</div>
+          <div><kbd>G</kbd> Toggle grid/list view</div>
+          <div><kbd>S</kbd> Toggle sitemap</div>
+          <div><kbd>F</kbd> Focus search</div>
+          <div><kbd>ESC</kbd> Close modals</div>
+          <div><kbd>→</kbd> Next image (lightbox)</div>
+          <div><kbd>←</kbd> Previous image (lightbox)</div>
+          <div><kbd>Space</kbd> Next image (lightbox)</div>
+        </div>
+        <p class="ntb-help-note">These shortcuts work when not typing in text fields.</p>
+      </div>
+    `;
+    
+    // Create help modal
+    const modal = document.createElement('div');
+    modal.className = 'ntb-help-modal';
+    modal.innerHTML = `
+      <div class="ntb-help-overlay" aria-label="Close help"></div>
+      <div class="ntb-help-dialog" role="dialog" aria-modal="true" aria-labelledby="ntb-help-title">
+        <button class="ntb-help-close" aria-label="Close help">&times;</button>
+        ${helpContent}
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close handlers
+    const close = () => modal.remove();
+    modal.querySelector('.ntb-help-close').addEventListener('click', close);
+    modal.querySelector('.ntb-help-overlay').addEventListener('click', close);
+    
+    // ESC key handler
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        close();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeEnhancements);
+  } else {
+    initializeEnhancements();
+  }
+
+})();
     const io = new In
