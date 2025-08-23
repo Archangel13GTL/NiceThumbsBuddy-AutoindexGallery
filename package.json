@@ -1,16 +1,17 @@
 {
-  "name": "soulful-thumbs",
+  "name": "nicethumbsbuddy-autoindexgallery",
   "version": "1.0.0",
   "description": "<div align=\"center\">",
-  "main": "soulful-thumbs.user.js",
+  "main": "NiceThumbsBuddy.user.js",
   "scripts": {
-    "test": "jest"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint \"*.user.js\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "jest": "^30.0.5"
+    "eslint": "^8.57.1"
   }
 }

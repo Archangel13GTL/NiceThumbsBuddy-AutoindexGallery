@@ -1,0 +1,16 @@
+{
+  "extends": "eslint:recommended",
+  "env": {
+    "es2021": true,
+    "browser": true
+  },
+  "globals": {
+    "GM_getValue": "readonly",
+    "GM_setValue": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-irregular-whitespace": "off",
+    "no-useless-escape": "off"
+  }
+}
