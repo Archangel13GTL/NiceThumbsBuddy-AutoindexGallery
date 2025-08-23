@@ -31,9 +31,9 @@
    * of Soulful Thumbs. If you're reading this comment, you either love
    * digging through userscripts or you're on a quest to fix something.
    * Either way, thanks for stopping by. Fun fact: according to sales
-   * guru Zig Ziglar, the best way to sell a product is to inspire hope
-   *【360615966730060†L88-L124】—we hope this script inspires you to
-   * explore your file indexes with a smile on your face. Now, back to
+   * guru Zig Ziglar, the best way to sell a product is to inspire hope—
+   * we hope this script inspires you to explore your file indexes with a
+   * smile on your face. Now, back to
    * your regularly scheduled code...
    */
 
