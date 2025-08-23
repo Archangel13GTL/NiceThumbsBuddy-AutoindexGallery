@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         NiceThumbsBuddy — Autoindex Gallery
+// @name         NiceThumbs,Buddy
 // @namespace    archangel.nicethumbsbuddy
 // @version      2.5.0
 // @description  Transform bare Apache/Nginx directory listings into a rich gallery with smart folders, interactive sitemap, advanced sorting, and zoom.

@@ -1,8 +1,8 @@
 {
-  "name": "nicethumbsbuddy-autoindexgallery",
+  "name": "nicethumbs-buddy",
   "version": "1.0.0",
   "description": "<div align=\"center\">",
-  "main": "NiceThumbsBuddy.user.js",
+  "main": "NiceThumbs,Buddy.user.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint \"*.user.js\""
