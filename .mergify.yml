@@ -44,17 +44,6 @@ pull_request_rules:
       label:
         toggle:
           - stack
-  - name: Request review from team
-    description: Request review from a specific team when checks are green.
-    conditions:
-      - -closed
-      - "#approved-reviews-by = 0"
-      - "#changes-requested-reviews-by = 0"
-      - review-requested != @TEAM_NAME_HERE
-    actions:
-      request_reviews:
-        teams:
-          - TEAM_NAME_HERE
   - name: Label conflicting pull requests
     description: Add a label to a pull request with conflict to spot it easily
     conditions:
