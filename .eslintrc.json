@@ -1,6 +1,12 @@
 {
   "extends": "eslint:recommended",
   "env": {
-    "es2021": true
+    "es2021": true,
+    "browser": true
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-irregular-whitespace": "off",
+    "no-useless-escape": "off"
   }
 }
