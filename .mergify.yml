@@ -1,1 +1,2 @@
-queue_rules: []
+queue_rules:
+  - name: Orion
