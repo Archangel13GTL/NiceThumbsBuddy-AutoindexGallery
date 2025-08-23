@@ -32,7 +32,7 @@ Modern servers still spit out plain directory indexes.  That’s fine for a robo
 ## 🛠️ Installation
 
 1. Install a userscript manager such as **Tampermonkey**, **Violentmonkey** or **Greasemonkey**.
-2. [Download and install the script](./soulful-thumbs.user.js) or create a new userscript in your manager and paste the contents of `soulful-thumbs.user.js`.
+2. [Download and install the script](./soulful-thumbs-2.1.1.user.js) or create a new userscript in your manager and paste the contents of `soulful-thumbs.user.js`.
 3. Navigate to any Apache, FancyIndex or Nginx directory listing, or a folder served on a CMS (`/uploads/`, `/pictures/`, `/files/`).  Soulful Thumbs will automatically detect the index and activate.
 
 ## 📝 Changelog (v2.0.0)
