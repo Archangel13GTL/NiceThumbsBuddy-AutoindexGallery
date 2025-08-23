@@ -1,6 +1,6 @@
 ## Soulful Thumbs v2.0.0 — Interactive sitemap & list view (2025‑08‑19)
 
-This release elevates Soulful Thumbs from a simple gallery enhancer to a **file discovery tool**.  Our philosophy comes from Zig Ziglar’s reminder to always inspire hope and earn trust【360615966730060†L88-L124】 and Dale Carnegie’s insistence on understanding what people truly need【103359133658734†L86-L92】.  Version 2.0.0 isn’t about eye‑candy—it’s about **helping you find everything**.
+This release elevates Soulful Thumbs from a simple gallery enhancer to a **file discovery tool**.  Our philosophy comes from Zig Ziglar’s reminder to always inspire hope and earn trust[1] and Dale Carnegie’s insistence on understanding what people truly need[2].  Version 2.0.0 isn’t about eye‑candy—it’s about **helping you find everything**.
 
 ### ✨ New
 
@@ -41,5 +41,12 @@ To illustrate version 2.0.0 in action, record a single ~20 second GIF at 1280�
 5. **Lightbox navigation** — click a file in list view to open the lightbox; zoom in, pan around, reset zoom and close.
 
 Keep the cursor motion purposeful and pause briefly after each action for clarity.
+
+## References
+
+[1] Zig Ziglar, *Secrets of Closing the Sale*. New York: Doubleday, 1984.
+
+[2] Dale Carnegie, *How to Win Friends and Influence People*. New York: Simon & Schuster, 1936.
+
 
 — 2025‑08‑19

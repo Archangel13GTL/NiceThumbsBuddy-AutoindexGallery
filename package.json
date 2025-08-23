@@ -1,0 +1,16 @@
+{
+  "name": "soulful-thumbs",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">",
+  "main": "soulful-thumbs.user.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "jest": "^30.0.5"
+  }
+}

@@ -6,7 +6,8 @@
 // @author       Archangel13GTL
 // @license      MIT
 // @run-at       document-end
-// @grant        none
+// @grant        GM_getValue
+// @grant        GM_setValue
 
 // Common media folders
 // @match        *://*/wp-content/uploads/*
@@ -41,10 +42,22 @@
   // --------------------------- Config --------------------------------------
   const IMG_EXT = /\.(avif|webp|jpe?g|png|gif|bmp|svg)$/i;
   const FILE_EXT = /\.(avif|webp|jpe?g|png|gif|bmp|svg|heic|tif?f|mp4|mov|webm|mkv|pdf|zip|rar|7z|tar|gz)$/i;
-  const MAX_ITEMS_PAGE = 12000; // per page safety guard
-  const SCAN_CONCURRENCY = 4;   // sitemap concurrent fetches
-  const IO_THRESHOLD = 0.1;     // intersection observer threshold
   const CACHE_EXPIRY = 7200000; // metadata cache expiry (2 hours)
+
+  // Preference helpers using GM_* if available, falling back to localStorage
+  const storage = (typeof GM_getValue === 'function' && typeof GM_setValue === 'function')
+    ? { get: GM_getValue, set: GM_setValue }
+    : {
+        get: (k) => localStorage.getItem(k),
+        set: (k, v) => localStorage.setItem(k, v)
+      };
+
+  const getPref = (key, def) => {
+    const v = storage.get(key);
+    return v !== undefined && v !== null ? v : def;
+  };
+
+  const setPref = (key, val) => storage.set(key, val);
 
   // Local storage keys
   const LSK = {
@@ -90,6 +103,11 @@
     n < 1073741824 ? `${(n / 1048576).toFixed(1)} MB` :
     `${(n / 1073741824).toFixed(2)} GB`
   );
+
+  // Configurable limits with validation
+  const MAX_ITEMS_PAGE = clamp(parseInt(getPref('ntb:maxitems', 12000), 10), 100, 50000); // per page safety guard
+  const SCAN_CONCURRENCY = clamp(parseInt(getPref('ntb:concurrency', 4), 10), 1, 16);    // sitemap concurrent fetches
+  const IO_THRESHOLD = clamp(parseFloat(getPref('ntb:iothreshold', 0.1)), 0, 1);         // intersection observer threshold
   
   // Shuffle array (for random sort)
   const shuffle = (array) => {
@@ -120,6 +138,30 @@
       return fn(...args);
     };
   };
+
+  // Add UI controls to adjust limits and persist them
+  function setupLimitControls() {
+    const poll = setInterval(() => {
+      const right = document.querySelector('.ntb-toolbar .ntb-right');
+      if (!right) return;
+      clearInterval(poll);
+      const btn = document.createElement('button');
+      btn.textContent = 'Limits';
+      btn.title = 'Adjust page limits and thresholds';
+      btn.addEventListener('click', () => {
+        const max = prompt('Max items per page (100-50000)', MAX_ITEMS_PAGE);
+        if (max !== null) setPref('ntb:maxitems', clamp(parseInt(max, 10) || MAX_ITEMS_PAGE, 100, 50000));
+        const conc = prompt('Scan concurrency (1-16)', SCAN_CONCURRENCY);
+        if (conc !== null) setPref('ntb:concurrency', clamp(parseInt(conc, 10) || SCAN_CONCURRENCY, 1, 16));
+        const thr = prompt('Intersection threshold (0-1)', IO_THRESHOLD);
+        if (thr !== null) setPref('ntb:iothreshold', clamp(parseFloat(thr) || IO_THRESHOLD, 0, 1));
+        location.reload();
+      });
+      right.appendChild(btn);
+    }, 500);
+  }
+
+  setupLimitControls();
 
   // Get file extension
   const getExt = (url) => {
@@ -1151,4 +1193,54 @@
     }
     
     const inFlight = new Map();
-    const io = new In
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+
+        const url = entry.target.getAttribute('data-url');
+        if (!url || cache.has(url) || inFlight.has(url)) continue;
+
+        inFlight.set(url, true);
+        fetch(url, { method: 'HEAD' }).then((res) => {
+          const size = parseInt(res.headers.get('content-length') || '0', 10);
+          const type = res.headers.get('content-type') || '';
+          cache.set(url, { size, type });
+          saveCache();
+        }).catch(() => {
+          // Ignore network errors
+        }).finally(() => {
+          inFlight.delete(url);
+        });
+      }
+    }, { threshold: IO_THRESHOLD });
+
+    function saveCache() {
+      try {
+        const obj = Object.fromEntries(cache.entries());
+        sessionStorage.setItem(storageKey, JSON.stringify(obj));
+        sessionStorage.setItem(storageExpiry, String(Date.now() + CACHE_EXPIRY));
+      } catch (e) {
+        console.warn('[NiceThumbsBuddy] Error saving metadata cache:', e);
+      }
+    }
+
+    function noteImageSize(url, width, height) {
+      const data = cache.get(url) || {};
+      if (!data.width || !data.height) {
+        cache.set(url, { ...data, width, height });
+        saveCache();
+      }
+    }
+
+    function get(url) {
+      return cache.get(url) || {};
+    }
+
+    function observe(el) {
+      io.observe(el);
+    }
+
+    return { noteImageSize, get, observe };
+  }
+
+})();
