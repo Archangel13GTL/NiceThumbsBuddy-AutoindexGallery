@@ -44,12 +44,6 @@ pull_request_rules:
       label:
         toggle:
           - stack
-  - name: Automatic merge
-    description: Merge when PR passes all branch protection and has label automerge
-    conditions:
-      - label = automerge
-    actions:
-      merge:
   - name: Request review from team
     description: Request review from a specific team when checks are green.
     conditions:
