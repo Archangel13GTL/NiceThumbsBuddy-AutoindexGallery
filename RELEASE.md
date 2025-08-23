@@ -48,4 +48,5 @@ Keep the cursor motion purposeful and pause briefly after each action for clarit
 
 [2] Dale Carnegie, *How to Win Friends and Influence People*. New York: Simon & Schuster, 1936.
 
+
 — 2025‑08‑19
