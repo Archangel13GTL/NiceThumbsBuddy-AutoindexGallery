@@ -1193,4 +1193,54 @@
     }
     
     const inFlight = new Map();
-    const io = new In
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+
+        const url = entry.target.getAttribute('data-url');
+        if (!url || cache.has(url) || inFlight.has(url)) continue;
+
+        inFlight.set(url, true);
+        fetch(url, { method: 'HEAD' }).then((res) => {
+          const size = parseInt(res.headers.get('content-length') || '0', 10);
+          const type = res.headers.get('content-type') || '';
+          cache.set(url, { size, type });
+          saveCache();
+        }).catch(() => {
+          // Ignore network errors
+        }).finally(() => {
+          inFlight.delete(url);
+        });
+      }
+    }, { threshold: IO_THRESHOLD });
+
+    function saveCache() {
+      try {
+        const obj = Object.fromEntries(cache.entries());
+        sessionStorage.setItem(storageKey, JSON.stringify(obj));
+        sessionStorage.setItem(storageExpiry, String(Date.now() + CACHE_EXPIRY));
+      } catch (e) {
+        console.warn('[NiceThumbsBuddy] Error saving metadata cache:', e);
+      }
+    }
+
+    function noteImageSize(url, width, height) {
+      const data = cache.get(url) || {};
+      if (!data.width || !data.height) {
+        cache.set(url, { ...data, width, height });
+        saveCache();
+      }
+    }
+
+    function get(url) {
+      return cache.get(url) || {};
+    }
+
+    function observe(el) {
+      io.observe(el);
+    }
+
+    return { noteImageSize, get, observe };
+  }
+
+})();
