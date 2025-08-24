@@ -35,7 +35,14 @@ Modern servers still spit out plain directory indexes.  That’s fine for a robo
 2. [Download and install the script](./soulful-thumbs.user.js) or create a new userscript in your manager and paste the contents of `soulful-thumbs.user.js`.
 3. Navigate to any Apache, FancyIndex or Nginx directory listing, or a folder served on a CMS (`/uploads/`, `/pictures/`, `/files/`).  Soulful Thumbs will automatically detect the index and activate.
 
-## 📝 Changelog (v2.0.0)
+## 📝 Changelog
+
+**2.6.0 — Accessibility & code improvements (2025‑08‑24)**
+
+* Fixed abrupt script ending and added restoration comment
+* Improved accessibility: ARIA labels, keyboard navigation, focus management
+* Added suggestions for modularization and shared utilities
+* Updated README with new features and best practices
 
 **2.0.0 — Interactive sitemap & list view (2025‑08‑19)**
 
@@ -59,3 +66,25 @@ Created by **Archangel** — a collaboration between you and me.  In the spirit 
 [2] Dale Carnegie, *How to Win Friends and Influence People*. New York: Simon & Schuster, 1936.
 
 [3] Wikipedia contributors, "Natural sort order," *Wikipedia, The Free Encyclopedia*, https://en.wikipedia.org/wiki/Natural_sort_order (accessed August 23, 2025).
+
+# NiceThumbsBuddy — Autoindex Gallery
+
+**A feature-rich, accessible gallery for Apache/Nginx directory listings.**
+
+NiceThumbsBuddy transforms bare directory listings into a modern, interactive gallery with smart folders, advanced sorting, zoomable lightbox, and accessibility features. It supports all major media types and is highly customizable.
+
+* **Smart folders**: Color-coded, type-detected (photo, video, audio, archive, document)
+* **Interactive sitemap/tree**: Collapsible navigation for subfolders
+* **Advanced sorting**: Natural, random, by date/size, etc.
+* **Zoomable lightbox**: Wheel zoom, drag-to-pan, keyboard navigation
+* **Adjustable limits/concurrency**: User controls for performance
+* **Modern UI**: Responsive grid/list, SVG icons, toolbar, themes
+* **Accessibility**: ARIA labels, keyboard navigation, focus management
+* **Extensible**: Modular code, easy to add new features
+
+## 🛠️ Accessibility & Best Practices
+
+NiceThumbsBuddy now includes ARIA labels, keyboard navigation, and focus management for improved accessibility. For further enhancements, consider:
+* Adding tooltips and screen reader support for all controls
+* Ensuring all interactive elements are reachable via keyboard
+* Using semantic HTML for better compatibility
