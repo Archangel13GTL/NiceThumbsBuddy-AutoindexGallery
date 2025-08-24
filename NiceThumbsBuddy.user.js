@@ -217,44 +217,43 @@
     });
   }
 
-  function previewFile(file) {
-    let pane = $('.ntb-preview-pane');
-    if (!pane) {
-      pane = document.createElement('aside');
-      pane.className = 'ntb-preview-pane';
-      document.body.insertBefore(pane, $('.ntb-content'));
+  function injectCSS() {
+    let s = document.getElementById('ntb-styles');
+    if (!s) {
+      s = document.createElement('style');
+      s.id = 'ntb-styles';
+      document.documentElement.appendChild(s);
     }
-    // Preview logic
-    if (isImg(file.url)) {
-      pane.innerHTML = `<img src="${file.url}" alt="${file.name}" style="max-width:100%;max-height:320px;">`;
-    } else if (isVideo(file.url)) {
-      pane.innerHTML = `<video src="${file.url}" controls style="max-width:100%;max-height:320px;"></video>`;
-    } else if (isAudio(file.url)) {
-      pane.innerHTML = `<audio src="${file.url}" controls style="width:100%"></audio>`;
-    } else if (isFont(file.url)) {
-      pane.innerHTML = `<iframe src="${file.url}" style="width:100%;height:320px;"></iframe>`;
-    } else if (isDoc(file.url)) {
-      if (/\.md|markdown$/i.test(file.url)) {
-        fetch(file.url).then(r => r.text()).then(md => {
-          pane.innerHTML = `<div style="padding:8px;">${window.markdownit().render(md)}</div>`;
-        });
-      } else {
-        fetch(file.url).then(r => r.text()).then(txt => {
-          pane.innerHTML = `<pre style="padding:8px;">${txt.slice(0, 2000)}</pre>`;
-        });
-      }
-    } else {
-      pane.innerHTML = `<a href="${file.url}" target="_blank">Open ${file.name}</a>`;
-    }
-    pane.setAttribute('aria-label', `Preview of ${file.name}`);
-    pane.focus();
+    s.textContent = CSS;
   }
 
-  // --------------------------- Initialization -----------------------------
-  injectCSS();
-  renderToolbar();
-  const { dirs } = parseIndex(document, location.href);
-  renderSidebar(dirs);
-  renderContent();
+  // --------------------------- Metadata Manager ---------------------------
+  function createMetadataManager() {
+    // Use sessionStorage to persist metadata across page navigation
+    const storageKey = 'ntb-metadata-cache';
+    const storageExpiry = 'ntb-metadata-expiry';
 
-})();
+    // Try to load cached data
+    let cache = new Map();
+    try {
+      const now = Date.now();
+      const expiry = parseInt(sessionStorage.getItem(storageExpiry) || '0', 10);
+
+      // Only use cache if it's still valid
+      if (expiry > now) {
+        const cachedData = JSON.parse(sessionStorage.getItem(storageKey) || '{}');
+        Object.entries(cachedData).forEach(([url, data]) => {
+          cache.set(url, data);
+        });
+        console.log(`[NiceThumbsBuddy] Loaded metadata for ${cache.size} items from cache`);
+      } else {
+        // Cache expired, clear it
+        sessionStorage.removeItem(storageKey);
+        sessionStorage.removeItem(storageExpiry);
+      }
+    } catch (e) {
+      console.warn('[NiceThumbsBuddy] Error loading metadata cache:', e);
+    }
+
+    const inFlight = new Map();
+    const io = new In

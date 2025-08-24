@@ -259,4 +259,10 @@
     $('#st-theme').value = setVar(LSK.theme,'dark');
     if($('#st-theme').value==='contrast'){ document.documentElement.classList.add('st-contrast'); }
 
-    const lb=setupLightbox(); const meta=createMetadataManager();
+    const lb=setupLightbox();
+    const meta=createMetadataManager();
+  }
+
+  main();
+})();
+
